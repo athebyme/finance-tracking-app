@@ -1,0 +1,46 @@
+{
+  "name": "fintracker",
+  "version": "1.0.0",
+  "description": "Современное веб-приложение для учета личных финансов с минималистичным дизайном",
+  "main": "index.html",
+  "scripts": {
+    "start": "python3 start.py || python start.py",
+    "serve": "npx serve -l 8000 -s .",
+    "dev": "npx live-server --port=8000 --open=index.html",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "docker:restart": "docker-compose restart",
+    "docker:start": "bash docker-run.sh"
+  },
+  "keywords": [
+    "finance",
+    "tracker",
+    "budget",
+    "money",
+    "expense",
+    "income",
+    "web-app",
+    "minimalist",
+    "responsive"
+  ],
+  "author": "FinTracker Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/athebyme/finance-tracking-app.git"
+  },
+  "bugs": {
+    "url": "https://github.com/athebyme/finance-tracking-app/issues"
+  },
+  "homepage": "https://github.com/athebyme/finance-tracking-app#readme",
+  "devDependencies": {
+    "live-server": "^1.2.2",
+    "serve": "^14.2.1"
+  },
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
+  }
+}
