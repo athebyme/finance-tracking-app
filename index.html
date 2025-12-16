@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinTracker - Учет финансов</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                    <circle cx="16" cy="16" r="16" fill="url(#gradient)"/>
+                    <path d="M16 8v16M10 16h12" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+                    <defs>
+                        <linearGradient id="gradient" x1="0" y1="0" x2="32" y2="32">
+                            <stop offset="0%" stop-color="#667eea"/>
+                            <stop offset="100%" stop-color="#764ba2"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+                <h1>FinTracker</h1>
+            </div>
+            <button class="theme-toggle" id="themeToggle" aria-label="Переключить тему">
+                <svg class="sun-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="5"/>
+                    <line x1="12" y1="1" x2="12" y2="3"/>
+                    <line x1="12" y1="21" x2="12" y2="23"/>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                    <line x1="1" y1="12" x2="3" y2="12"/>
+                    <line x1="21" y1="12" x2="23" y2="12"/>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                </svg>
+                <svg class="moon-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
+            </button>
+        </header>
+
+        <!-- Balance Card -->
+        <div class="balance-card">
+            <div class="balance-header">
+                <span class="balance-label">Общий баланс</span>
+                <div class="period-selector">
+                    <button class="period-btn active" data-period="month">Месяц</button>
+                    <button class="period-btn" data-period="year">Год</button>
+                    <button class="period-btn" data-period="all">Все</button>
+                </div>
+            </div>
+            <div class="balance-amount" id="totalBalance">₽0.00</div>
+            <div class="balance-stats">
+                <div class="stat income">
+                    <div class="stat-icon">↑</div>
+                    <div class="stat-info">
+                        <span class="stat-label">Доходы</span>
+                        <span class="stat-amount" id="totalIncome">₽0.00</span>
+                    </div>
+                </div>
+                <div class="stat expense">
+                    <div class="stat-icon">↓</div>
+                    <div class="stat-info">
+                        <span class="stat-label">Расходы</span>
+                        <span class="stat-amount" id="totalExpense">₽0.00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Add Section -->
+        <div class="quick-add">
+            <h2>Добавить транзакцию</h2>
+            <form id="transactionForm" class="transaction-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <input type="number" id="amount" placeholder="Сумма" required step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <input type="text" id="description" placeholder="Описание" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <select id="category" required>
+                            <option value="">Категория</option>
+                            <option value="food">🍔 Еда</option>
+                            <option value="transport">🚗 Транспорт</option>
+                            <option value="shopping">🛍️ Покупки</option>
+                            <option value="entertainment">🎮 Развлечения</option>
+                            <option value="bills">📱 Счета</option>
+                            <option value="health">💊 Здоровье</option>
+                            <option value="salary">💰 Зарплата</option>
+                            <option value="freelance">💻 Фриланс</option>
+                            <option value="investment">📈 Инвестиции</option>
+                            <option value="other">📦 Другое</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <input type="date" id="date" required>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-expense" data-type="expense">
+                        <span>− Расход</span>
+                    </button>
+                    <button type="submit" class="btn btn-income" data-type="income">
+                        <span>+ Доход</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Chart Section -->
+        <div class="chart-section">
+            <h2>Обзор</h2>
+            <div class="chart-container">
+                <canvas id="expenseChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Transactions List -->
+        <div class="transactions-section">
+            <div class="section-header">
+                <h2>История транзакций</h2>
+                <div class="filter-buttons">
+                    <button class="filter-btn active" data-filter="all">Все</button>
+                    <button class="filter-btn" data-filter="income">Доходы</button>
+                    <button class="filter-btn" data-filter="expense">Расходы</button>
+                </div>
+            </div>
+            <div class="transactions-list" id="transactionsList">
+                <div class="empty-state">
+                    <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+                        <circle cx="32" cy="32" r="32" fill="var(--bg-secondary)"/>
+                        <path d="M32 20v24M20 32h24" stroke="var(--text-tertiary)" stroke-width="3" stroke-linecap="round"/>
+                    </svg>
+                    <p>Нет транзакций</p>
+                    <span>Добавьте первую транзакцию выше</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
