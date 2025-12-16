@@ -4,6 +4,7 @@
 
 let transactions = [];
 let accounts = [];
+let budgets = [];
 let currentAccountId = null;
 let currentFilter = 'all';
 let currentPeriod = 'month';
@@ -36,11 +37,13 @@ const elements = {
 function init() {
     loadAccounts();
     loadTransactions();
+    loadBudgets();
     loadTheme();
     setDefaultDate();
     setupEventListeners();
     updateUI();
     renderAccounts();
+    renderBudgets();
 }
 
 // ===============================================
@@ -119,6 +122,8 @@ function addTransaction(type) {
     saveTransactions();
     updateUI();
     renderAccounts(); // Обновляем балансы счетов
+    renderBudgets(); // Обновляем прогресс бюджетов
+    checkBudgetAlerts(transaction); // Проверяем превышение бюджета
     elements.form.reset();
     setDefaultDate();
 
@@ -306,6 +311,235 @@ function getAccountTypeName(type) {
         other: 'Другое'
     };
     return names[type] || 'Другое';
+}
+
+// ===============================================
+// Budgets Management
+// ===============================================
+
+function addBudget(budgetData) {
+    const budget = {
+        id: generateId(),
+        category: budgetData.category,
+        amount: parseFloat(budgetData.amount),
+        period: budgetData.period || 'month',
+        accountId: budgetData.accountId || null, // null = для всех счетов
+        alertThreshold: parseFloat(budgetData.alertThreshold) || 80, // % для предупреждения
+        createdAt: new Date().getTime()
+    };
+
+    budgets.push(budget);
+    saveBudgets();
+    renderBudgets();
+    return budget;
+}
+
+function updateBudget(budgetId, updates) {
+    const budget = budgets.find(b => b.id === budgetId);
+    if (budget) {
+        Object.assign(budget, updates);
+        saveBudgets();
+        renderBudgets();
+    }
+}
+
+function deleteBudget(budgetId) {
+    budgets = budgets.filter(b => b.id !== budgetId);
+    saveBudgets();
+    renderBudgets();
+}
+
+function getBudgetSpent(budget) {
+    // Получаем даты для текущего периода
+    const { startDate, endDate } = getBudgetPeriodDates(budget.period);
+
+    // Фильтруем транзакции по периоду, категории и счету
+    const filtered = transactions.filter(t => {
+        const transDate = new Date(t.date);
+        const matchesPeriod = transDate >= startDate && transDate <= endDate;
+        const matchesCategory = budget.category === 'all' || t.category === budget.category;
+        const matchesAccount = !budget.accountId || t.accountId === budget.accountId;
+        const isExpense = t.type === 'expense';
+
+        return matchesPeriod && matchesCategory && matchesAccount && isExpense;
+    });
+
+    return filtered.reduce((sum, t) => sum + t.amount, 0);
+}
+
+function getBudgetPeriodDates(period) {
+    const now = new Date();
+    let startDate, endDate;
+
+    switch (period) {
+        case 'week':
+            // Начало недели (понедельник)
+            const dayOfWeek = now.getDay();
+            const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+            startDate = new Date(now);
+            startDate.setDate(now.getDate() + diff);
+            startDate.setHours(0, 0, 0, 0);
+
+            endDate = new Date(startDate);
+            endDate.setDate(startDate.getDate() + 6);
+            endDate.setHours(23, 59, 59, 999);
+            break;
+
+        case 'month':
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+            break;
+
+        case 'year':
+            startDate = new Date(now.getFullYear(), 0, 1);
+            endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+            break;
+
+        default:
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    }
+
+    return { startDate, endDate };
+}
+
+function getBudgetProgress(budget) {
+    const spent = getBudgetSpent(budget);
+    const percentage = (spent / budget.amount) * 100;
+
+    return {
+        spent,
+        remaining: Math.max(0, budget.amount - spent),
+        percentage: Math.min(100, percentage),
+        isOverBudget: spent > budget.amount,
+        isNearLimit: percentage >= budget.alertThreshold && percentage < 100
+    };
+}
+
+function checkBudgetAlerts(transaction) {
+    // Проверяем только расходы
+    if (transaction.type !== 'expense') return;
+
+    budgets.forEach(budget => {
+        // Проверяем подходит ли транзакция к бюджету
+        const matchesCategory = budget.category === 'all' || transaction.category === budget.category;
+        const matchesAccount = !budget.accountId || transaction.accountId === budget.accountId;
+
+        if (matchesCategory && matchesAccount) {
+            const progress = getBudgetProgress(budget);
+            const categoryName = getCategoryName(budget.category);
+
+            if (progress.isOverBudget) {
+                showBudgetAlert(
+                    `Превышен бюджет "${categoryName}"!`,
+                    `Потрачено: ${formatCurrency(progress.spent)} из ${formatCurrency(budget.amount)}`,
+                    'error'
+                );
+            } else if (progress.isNearLimit) {
+                showBudgetAlert(
+                    `Внимание! Бюджет "${categoryName}" близок к лимиту`,
+                    `Потрачено: ${formatCurrency(progress.spent)} из ${formatCurrency(budget.amount)} (${Math.round(progress.percentage)}%)`,
+                    'warning'
+                );
+            }
+        }
+    });
+}
+
+function showBudgetAlert(title, message, type = 'info') {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `budget-alert budget-alert-${type}`;
+    alertDiv.innerHTML = `
+        <div class="budget-alert-content">
+            <div class="budget-alert-icon">${type === 'error' ? '⚠️' : '💡'}</div>
+            <div class="budget-alert-text">
+                <div class="budget-alert-title">${title}</div>
+                <div class="budget-alert-message">${message}</div>
+            </div>
+            <button class="budget-alert-close" onclick="this.parentElement.parentElement.remove()">×</button>
+        </div>
+    `;
+
+    document.body.appendChild(alertDiv);
+
+    // Автоматически удалить через 5 секунд
+    setTimeout(() => {
+        if (alertDiv.parentElement) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+
+function renderBudgets() {
+    const budgetsContainer = document.getElementById('budgetsContainer');
+    if (!budgetsContainer) return;
+
+    if (budgets.length === 0) {
+        budgetsContainer.innerHTML = `
+            <div class="empty-budgets">
+                <p>Нет бюджетов</p>
+                <span>Создайте бюджет чтобы контролировать расходы</span>
+            </div>
+        `;
+        return;
+    }
+
+    const html = budgets.map(budget => {
+        const progress = getBudgetProgress(budget);
+        const categoryName = budget.category === 'all' ? 'Все категории' : getCategoryName(budget.category);
+        const periodName = getBudgetPeriodName(budget.period);
+        const accountName = budget.accountId
+            ? accounts.find(a => a.id === budget.accountId)?.name
+            : 'Все счета';
+
+        let statusClass = '';
+        if (progress.isOverBudget) statusClass = 'over-budget';
+        else if (progress.isNearLimit) statusClass = 'near-limit';
+
+        return `
+            <div class="budget-card ${statusClass}">
+                <div class="budget-header">
+                    <div class="budget-info">
+                        <span class="budget-category">${getCategoryIcon(budget.category)} ${categoryName}</span>
+                        <span class="budget-period">${periodName} • ${accountName}</span>
+                    </div>
+                    <button class="budget-menu-btn" onclick="showBudgetMenu('${budget.id}')">⋮</button>
+                </div>
+
+                <div class="budget-amounts">
+                    <div class="budget-spent">
+                        <span class="label">Потрачено</span>
+                        <span class="amount">${formatCurrency(progress.spent)}</span>
+                    </div>
+                    <div class="budget-total">
+                        <span class="label">Лимит</span>
+                        <span class="amount">${formatCurrency(budget.amount)}</span>
+                    </div>
+                </div>
+
+                <div class="budget-progress-container">
+                    <div class="budget-progress-bar">
+                        <div class="budget-progress-fill" style="width: ${progress.percentage}%"></div>
+                    </div>
+                    <div class="budget-progress-text">
+                        <span>${Math.round(progress.percentage)}% использовано</span>
+                        <span class="budget-remaining">${formatCurrency(progress.remaining)} осталось</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    budgetsContainer.innerHTML = html;
+}
+
+function getBudgetPeriodName(period) {
+    const names = {
+        week: 'Неделя',
+        month: 'Месяц',
+        year: 'Год'
+    };
+    return names[period] || 'Месяц';
 }
 
 // ===============================================
@@ -676,6 +910,17 @@ function loadAccounts() {
     }
 }
 
+function saveBudgets() {
+    localStorage.setItem('budgets', JSON.stringify(budgets));
+}
+
+function loadBudgets() {
+    const saved = localStorage.getItem('budgets');
+    if (saved) {
+        budgets = JSON.parse(saved);
+    }
+}
+
 // ===============================================
 // Account Modal
 // ===============================================
@@ -783,6 +1028,96 @@ window.addEventListener('click', (event) => {
     const modal = document.getElementById('accountModal');
     if (event.target === modal) {
         closeAccountModal();
+    }
+});
+
+// ===============================================
+// Budget Modal
+// ===============================================
+
+let editingBudgetId = null;
+
+window.openBudgetModal = function(budgetId = null) {
+    const modal = document.getElementById('budgetModal');
+    const title = document.getElementById('budgetModalTitle');
+    const form = document.getElementById('budgetForm');
+
+    editingBudgetId = budgetId;
+
+    if (budgetId) {
+        // Редактирование
+        const budget = budgets.find(b => b.id === budgetId);
+        if (budget) {
+            title.textContent = 'Редактировать бюджет';
+            document.getElementById('budgetCategory').value = budget.category;
+            document.getElementById('budgetAmount').value = budget.amount;
+            document.getElementById('budgetPeriod').value = budget.period;
+            document.getElementById('budgetAccount').value = budget.accountId || '';
+            document.getElementById('budgetAlert').value = budget.alertThreshold;
+        }
+    } else {
+        // Создание
+        title.textContent = 'Создать бюджет';
+        form.reset();
+        // Установить дефолтные значения
+        document.getElementById('budgetPeriod').value = 'month';
+        document.getElementById('budgetAlert').value = '80';
+    }
+
+    modal.style.display = 'flex';
+};
+
+window.closeBudgetModal = function() {
+    const modal = document.getElementById('budgetModal');
+    modal.style.display = 'none';
+    editingBudgetId = null;
+};
+
+window.saveBudget = function(event) {
+    event.preventDefault();
+
+    const budgetData = {
+        category: document.getElementById('budgetCategory').value,
+        amount: document.getElementById('budgetAmount').value,
+        period: document.getElementById('budgetPeriod').value,
+        accountId: document.getElementById('budgetAccount').value || null,
+        alertThreshold: document.getElementById('budgetAlert').value
+    };
+
+    if (editingBudgetId) {
+        // Обновление существующего бюджета
+        updateBudget(editingBudgetId, budgetData);
+    } else {
+        // Создание нового бюджета
+        addBudget(budgetData);
+    }
+
+    closeBudgetModal();
+};
+
+window.showBudgetMenu = function(budgetId) {
+    const budget = budgets.find(b => b.id === budgetId);
+    if (!budget) return;
+
+    const categoryName = budget.category === 'all' ? 'Все категории' : getCategoryName(budget.category);
+
+    const choice = confirm(`Бюджет: ${categoryName}\n\n1. Редактировать\n2. Удалить\n\nВыберите действие (OK - Редактировать, Отмена - Удалить)`);
+
+    if (choice) {
+        openBudgetModal(budgetId);
+    } else {
+        const confirmDelete = confirm('Вы уверены что хотите удалить этот бюджет?');
+        if (confirmDelete) {
+            deleteBudget(budgetId);
+        }
+    }
+};
+
+// Закрытие модального окна по клику вне его
+window.addEventListener('click', (event) => {
+    const budgetModal = document.getElementById('budgetModal');
+    if (event.target === budgetModal) {
+        closeBudgetModal();
     }
 });
 
