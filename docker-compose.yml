@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  fintracker:
+    # Название сервиса
+    container_name: fintracker-app
+
+    # Собираем из локального Dockerfile
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    # Имя образа
+    image: fintracker:latest
+
+    # Маппинг портов (хост:контейнер)
+    ports:
+      - "8080:80"  # Приложение будет доступно на http://localhost:8080
+
+    # Автоматический перезапуск
+    restart: unless-stopped
+
+    # Метки для организации
+    labels:
+      - "app=fintracker"
+      - "environment=production"
+
+    # Healthcheck для мониторинга
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+    # Ограничения ресурсов (опционально)
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+        reservations:
+          cpus: '0.1'
+          memory: 32M
+
+    # Переменные окружения (если понадобятся)
+    environment:
+      - TZ=Europe/Moscow
+
+    # Логирование
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# Сеть (опционально, для расширения в будущем)
+networks:
+  default:
+    name: fintracker-network

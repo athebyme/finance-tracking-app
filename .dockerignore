@@ -1,0 +1,48 @@
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+README.md
+*.md
+docs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+.DS_Store
+
+# Scripts (не нужны в контейнере)
+start.py
+start.sh
+start.bat
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Node (если будет добавлен)
+node_modules/
+package.json
+package-lock.json
+yarn.lock
+
+# Logs
+*.log
+npm-debug.log*
+
+# Temporary
+*.tmp
+*.temp
+*.bak
+*.cache
+
+# OS
+Thumbs.db
+ehthumbs.db
+Desktop.ini
