@@ -116,6 +116,17 @@
             </div>
         </div>
 
+        <!-- Budgets Section -->
+        <div class="budgets-section">
+            <div class="section-header">
+                <h2>Бюджеты</h2>
+                <button class="btn-add-budget" onclick="openBudgetModal()">
+                    <span>+ Создать бюджет</span>
+                </button>
+            </div>
+            <div class="budgets-container" id="budgetsContainer"></div>
+        </div>
+
         <!-- Quick Add Section -->
         <div class="quick-add">
             <h2>Добавить транзакцию</h2>
@@ -253,6 +264,63 @@
 
                 <div class="modal-actions">
                     <button type="button" class="btn-secondary" onclick="closeAccountModal()">Отмена</button>
+                    <button type="submit" class="btn-primary">Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Budget Modal -->
+    <div id="budgetModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="budgetModalTitle">Создать бюджет</h2>
+                <button class="modal-close" onclick="closeBudgetModal()">×</button>
+            </div>
+            <form id="budgetForm" onsubmit="saveBudget(event)">
+                <div class="form-group">
+                    <label for="budgetCategory">Категория *</label>
+                    <select id="budgetCategory" required>
+                        <option value="all">Все категории</option>
+                        <option value="food">🍔 Еда</option>
+                        <option value="transport">🚗 Транспорт</option>
+                        <option value="shopping">🛍️ Покупки</option>
+                        <option value="entertainment">🎮 Развлечения</option>
+                        <option value="bills">📱 Счета</option>
+                        <option value="health">💊 Здоровье</option>
+                        <option value="other">📦 Другое</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="budgetAmount">Лимит расходов *</label>
+                    <input type="number" id="budgetAmount" placeholder="Например: 30000" required step="0.01" min="0">
+                </div>
+
+                <div class="form-group">
+                    <label for="budgetPeriod">Период *</label>
+                    <select id="budgetPeriod" required>
+                        <option value="week">Неделя</option>
+                        <option value="month">Месяц</option>
+                        <option value="year">Год</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="budgetAccount">Счет (необязательно)</label>
+                    <select id="budgetAccount">
+                        <option value="">Все счета</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="budgetAlert">Предупреждение при достижении (%)</label>
+                    <input type="number" id="budgetAlert" placeholder="80" min="50" max="100" step="5" value="80">
+                    <small>Вы получите уведомление когда потратите указанный процент от лимита</small>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="closeBudgetModal()">Отмена</button>
                     <button type="submit" class="btn-primary">Сохранить</button>
                 </div>
             </form>

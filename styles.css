@@ -38,6 +38,19 @@
 
     /* Typography */
     --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+    /* Accent & Additional Colors */
+    --accent-color: #667eea;
+    --transition-base: 0.2s ease;
+    --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.2);
+
+    /* Budget Status Colors */
+    --budget-normal: #10b981;
+    --budget-warning: #f59e0b;
+    --budget-danger: #ef4444;
+    --budget-normal-bg: #d1fae5;
+    --budget-warning-bg: #fef3c7;
+    --budget-danger-bg: #fee2e2;
 }
 
 /* Dark Theme */
@@ -52,8 +65,12 @@
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
     --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
     --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
+    --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.8);
     --income-bg: #064e3b;
     --expense-bg: #7f1d1d;
+    --budget-normal-bg: #064e3b;
+    --budget-warning-bg: #78350f;
+    --budget-danger-bg: #7f1d1d;
 }
 
 /* ===============================================
@@ -588,6 +605,282 @@ body {
 .empty-state span {
     font-size: 0.875rem;
     color: var(--text-secondary);
+}
+
+/* ===============================================
+   Budgets Section
+   =============================================== */
+
+.budgets-section {
+    background: var(--bg-primary);
+    padding: var(--spacing-lg);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: var(--spacing-lg);
+}
+
+.budgets-section .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-md);
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+}
+
+.budgets-section h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.btn-add-budget {
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: var(--accent-color);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.btn-add-budget:hover {
+    background: #764ba2;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.budgets-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--spacing-md);
+}
+
+.budget-card {
+    background: var(--bg-secondary);
+    padding: var(--spacing-md);
+    border-radius: var(--radius-md);
+    border-left: 4px solid var(--budget-normal);
+    transition: all var(--transition-base);
+    position: relative;
+}
+
+.budget-card.near-limit {
+    border-left-color: var(--budget-warning);
+}
+
+.budget-card.over-budget {
+    border-left-color: var(--budget-danger);
+}
+
+.budget-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+}
+
+.budget-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-sm);
+}
+
+.budget-category {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.budget-category-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 1rem;
+}
+
+.budget-menu-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0 var(--spacing-xs);
+    opacity: 0;
+    transition: opacity var(--transition-base);
+}
+
+.budget-card:hover .budget-menu-btn {
+    opacity: 1;
+}
+
+.budget-menu-btn:hover {
+    color: var(--text-primary);
+}
+
+.budget-amount-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: var(--spacing-xs);
+}
+
+.budget-spent {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.budget-limit {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.budget-progress-bar {
+    width: 100%;
+    height: 8px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    margin-bottom: var(--spacing-xs);
+}
+
+.budget-progress-fill {
+    height: 100%;
+    background: var(--budget-normal);
+    transition: width 0.3s ease, background-color 0.3s ease;
+    border-radius: var(--radius-sm);
+}
+
+.budget-card.near-limit .budget-progress-fill {
+    background: var(--budget-warning);
+}
+
+.budget-card.over-budget .budget-progress-fill {
+    background: var(--budget-danger);
+}
+
+.budget-details {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.813rem;
+    color: var(--text-secondary);
+}
+
+.budget-period {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.budget-percentage {
+    font-weight: 600;
+}
+
+.budget-card.near-limit .budget-percentage {
+    color: var(--budget-warning);
+}
+
+.budget-card.over-budget .budget-percentage {
+    color: var(--budget-danger);
+}
+
+.empty-budgets {
+    text-align: center;
+    padding: var(--spacing-xl);
+    color: var(--text-secondary);
+}
+
+/* Budget Alerts */
+.budget-alert {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    max-width: 400px;
+    padding: var(--spacing-md);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    z-index: 10000;
+    animation: budgetAlertSlideIn 0.3s ease-out;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+}
+
+@keyframes budgetAlertSlideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.budget-alert-warning {
+    background: var(--budget-warning-bg);
+    border-left: 4px solid var(--budget-warning);
+}
+
+.budget-alert-error {
+    background: var(--budget-danger-bg);
+    border-left: 4px solid var(--budget-danger);
+}
+
+.budget-alert-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.budget-alert-content {
+    flex: 1;
+}
+
+.budget-alert-title {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.budget-alert-message {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.budget-alert-close {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1.25rem;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-base);
+    flex-shrink: 0;
+}
+
+.budget-alert-close:hover {
+    background: rgba(0, 0, 0, 0.1);
+    color: var(--text-primary);
+}
+
+/* Small text for form hints */
+.modal .form-group small {
+    display: block;
+    margin-top: var(--spacing-xs);
+    font-size: 0.813rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
 }
 
 /* ===============================================
