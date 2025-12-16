@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PWA Icon Generator - FinTracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 1200px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        p {
+            color: #6c757d;
+            margin-bottom: 30px;
+        }
+
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .icon-preview {
+            text-align: center;
+        }
+
+        .icon-preview canvas {
+            border-radius: 20%;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            margin-bottom: 10px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .icon-size {
+            color: #6c757d;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 16px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #495057;
+        }
+
+        .btn-secondary:hover {
+            background: #e9ecef;
+        }
+
+        .instructions {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 30px;
+        }
+
+        .instructions h3 {
+            color: #495057;
+            margin-bottom: 10px;
+        }
+
+        .instructions ol {
+            padding-left: 20px;
+            color: #6c757d;
+        }
+
+        .instructions li {
+            margin-bottom: 8px;
+        }
+
+        #hiddenCanvas {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 PWA Icon Generator</h1>
+        <p>Генератор иконок для FinTracker PWA приложения</p>
+
+        <div class="preview-grid" id="previewGrid"></div>
+
+        <div class="button-group">
+            <button class="btn-primary" onclick="downloadAll()">📥 Скачать все иконки</button>
+            <button class="btn-secondary" onclick="regenerateIcons()">🔄 Перегенерировать</button>
+        </div>
+
+        <div class="instructions">
+            <h3>📋 Инструкция:</h3>
+            <ol>
+                <li>Нажмите "Скачать все иконки" чтобы сохранить все размеры</li>
+                <li>Поместите скачанные PNG файлы в корневую папку проекта</li>
+                <li>Иконки будут автоматически использоваться PWA приложением</li>
+                <li>Для iOS добавьте иконки в папку проекта и перезапустите приложение</li>
+            </ol>
+        </div>
+    </div>
+
+    <canvas id="hiddenCanvas"></canvas>
+
+    <script>
+        const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
+        const icons = {};
+
+        function drawIcon(canvas, size) {
+            const ctx = canvas.getContext('2d');
+            canvas.width = size;
+            canvas.height = size;
+
+            // Background gradient
+            const gradient = ctx.createLinearGradient(0, 0, size, size);
+            gradient.addColorStop(0, '#667eea');
+            gradient.addColorStop(1, '#764ba2');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, size, size);
+
+            // Draw plus sign (logo)
+            ctx.strokeStyle = 'white';
+            ctx.lineCap = 'round';
+            ctx.lineWidth = size * 0.08;
+
+            const center = size / 2;
+            const lineLength = size * 0.4;
+
+            // Vertical line
+            ctx.beginPath();
+            ctx.moveTo(center, center - lineLength / 2);
+            ctx.lineTo(center, center + lineLength / 2);
+            ctx.stroke();
+
+            // Horizontal line
+            ctx.beginPath();
+            ctx.moveTo(center - lineLength / 2, center);
+            ctx.lineTo(center + lineLength / 2, center);
+            ctx.stroke();
+
+            return canvas;
+        }
+
+        function createIconPreview(size) {
+            const container = document.createElement('div');
+            container.className = 'icon-preview';
+
+            const canvas = document.createElement('canvas');
+            drawIcon(canvas, size);
+            icons[size] = canvas;
+
+            const sizeLabel = document.createElement('div');
+            sizeLabel.className = 'icon-size';
+            sizeLabel.textContent = `${size}x${size}px`;
+
+            const downloadBtn = document.createElement('button');
+            downloadBtn.className = 'btn-secondary';
+            downloadBtn.textContent = '⬇️';
+            downloadBtn.style.padding = '6px 12px';
+            downloadBtn.style.fontSize = '14px';
+            downloadBtn.onclick = () => downloadIcon(size);
+
+            container.appendChild(canvas);
+            container.appendChild(sizeLabel);
+            container.appendChild(downloadBtn);
+
+            return container;
+        }
+
+        function downloadIcon(size) {
+            const canvas = icons[size];
+            const link = document.createElement('a');
+            link.download = `icon-${size}x${size}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        function downloadAll() {
+            sizes.forEach((size, index) => {
+                setTimeout(() => {
+                    downloadIcon(size);
+                }, index * 200);
+            });
+        }
+
+        function regenerateIcons() {
+            const grid = document.getElementById('previewGrid');
+            grid.innerHTML = '';
+            generateIcons();
+        }
+
+        function generateIcons() {
+            const grid = document.getElementById('previewGrid');
+            sizes.forEach(size => {
+                const preview = createIconPreview(size);
+                grid.appendChild(preview);
+            });
+        }
+
+        // Generate icons on page load
+        generateIcons();
+    </script>
+</body>
+</html>

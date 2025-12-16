@@ -446,7 +446,283 @@ function loadTransactions() {
 }
 
 // ===============================================
+// PWA - Service Worker Registration
+// ===============================================
+
+async function registerServiceWorker() {
+    if ('serviceWorker' in navigator) {
+        try {
+            const registration = await navigator.serviceWorker.register('/service-worker.js', {
+                scope: '/'
+            });
+
+            console.log('[PWA] Service Worker registered successfully:', registration);
+
+            // Обработка обновления Service Worker
+            registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                console.log('[PWA] New Service Worker found, installing...');
+
+                newWorker.addEventListener('statechange', () => {
+                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        console.log('[PWA] New Service Worker installed, update available');
+                        showUpdateNotification();
+                    }
+                });
+            });
+
+            // Проверка обновлений каждые 60 секунд
+            setInterval(() => {
+                registration.update();
+            }, 60000);
+
+        } catch (error) {
+            console.error('[PWA] Service Worker registration failed:', error);
+        }
+    } else {
+        console.log('[PWA] Service Workers are not supported');
+    }
+}
+
+// Показать уведомление об обновлении
+function showUpdateNotification() {
+    const updateBanner = document.createElement('div');
+    updateBanner.className = 'update-banner';
+    updateBanner.innerHTML = `
+        <div class="update-banner-content">
+            <span>🎉 Доступна новая версия приложения!</span>
+            <button onclick="updateApp()" class="update-btn">Обновить</button>
+            <button onclick="dismissUpdate()" class="dismiss-btn">Позже</button>
+        </div>
+    `;
+    document.body.appendChild(updateBanner);
+
+    // Добавить стили для баннера
+    if (!document.getElementById('pwa-styles')) {
+        const style = document.createElement('style');
+        style.id = 'pwa-styles';
+        style.textContent = `
+            .update-banner {
+                position: fixed;
+                bottom: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 16px 24px;
+                border-radius: 12px;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+                z-index: 10000;
+                animation: slideUp 0.3s ease-out;
+                max-width: 90%;
+            }
+
+            .update-banner-content {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                flex-wrap: wrap;
+            }
+
+            .update-banner button {
+                padding: 8px 16px;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                font-weight: 500;
+                font-size: 14px;
+                transition: all 0.2s;
+            }
+
+            .update-btn {
+                background: white;
+                color: #667eea;
+            }
+
+            .update-btn:hover {
+                transform: scale(1.05);
+            }
+
+            .dismiss-btn {
+                background: rgba(255, 255, 255, 0.2);
+                color: white;
+            }
+
+            .dismiss-btn:hover {
+                background: rgba(255, 255, 255, 0.3);
+            }
+
+            .install-banner {
+                position: fixed;
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: white;
+                color: #1a1a1a;
+                padding: 16px 24px;
+                border-radius: 12px;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+                z-index: 10000;
+                animation: slideDown 0.3s ease-out;
+                max-width: 90%;
+            }
+
+            [data-theme="dark"] .install-banner {
+                background: #1a1a1a;
+                color: white;
+            }
+
+            @keyframes slideUp {
+                from {
+                    transform: translateX(-50%) translateY(100px);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(-50%) translateY(0);
+                    opacity: 1;
+                }
+            }
+
+            @keyframes slideDown {
+                from {
+                    transform: translateX(-50%) translateY(-100px);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(-50%) translateY(0);
+                    opacity: 1;
+                }
+            }
+
+            @media (max-width: 768px) {
+                .update-banner-content {
+                    flex-direction: column;
+                    align-items: stretch;
+                }
+
+                .update-banner button {
+                    width: 100%;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
+// Обновить приложение
+window.updateApp = function() {
+    if (navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
+    }
+    window.location.reload();
+};
+
+// Отклонить обновление
+window.dismissUpdate = function() {
+    const banner = document.querySelector('.update-banner');
+    if (banner) {
+        banner.remove();
+    }
+};
+
+// ===============================================
+// PWA - Install Prompt
+// ===============================================
+
+let deferredPrompt;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    // Предотвратить автоматический показ промпта
+    e.preventDefault();
+    deferredPrompt = e;
+
+    console.log('[PWA] Install prompt available');
+
+    // Показать баннер установки
+    showInstallBanner();
+});
+
+function showInstallBanner() {
+    // Проверить, не отклонял ли пользователь установку ранее
+    if (localStorage.getItem('pwa-install-dismissed')) {
+        return;
+    }
+
+    const installBanner = document.createElement('div');
+    installBanner.className = 'install-banner';
+    installBanner.innerHTML = `
+        <div class="update-banner-content">
+            <span>📱 Установите FinTracker на устройство для быстрого доступа!</span>
+            <button onclick="installPWA()" class="update-btn">Установить</button>
+            <button onclick="dismissInstall()" class="dismiss-btn">Нет, спасибо</button>
+        </div>
+    `;
+    document.body.appendChild(installBanner);
+}
+
+// Установить PWA
+window.installPWA = async function() {
+    if (!deferredPrompt) {
+        return;
+    }
+
+    // Показать промпт установки
+    deferredPrompt.prompt();
+
+    // Ждем выбора пользователя
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log('[PWA] User choice:', outcome);
+
+    if (outcome === 'accepted') {
+        console.log('[PWA] App installed');
+    } else {
+        console.log('[PWA] App installation declined');
+    }
+
+    // Очистить промпт
+    deferredPrompt = null;
+
+    // Удалить баннер
+    const banner = document.querySelector('.install-banner');
+    if (banner) {
+        banner.remove();
+    }
+};
+
+// Отклонить установку
+window.dismissInstall = function() {
+    localStorage.setItem('pwa-install-dismissed', 'true');
+    const banner = document.querySelector('.install-banner');
+    if (banner) {
+        banner.remove();
+    }
+};
+
+// Обработка успешной установки
+window.addEventListener('appinstalled', () => {
+    console.log('[PWA] App successfully installed');
+    deferredPrompt = null;
+
+    // Показать уведомление об успешной установке
+    const notification = document.createElement('div');
+    notification.className = 'update-banner';
+    notification.innerHTML = `
+        <div class="update-banner-content">
+            <span>✅ FinTracker успешно установлен!</span>
+        </div>
+    `;
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+});
+
+// ===============================================
 // Initialize App
 // ===============================================
 
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', () => {
+    init();
+    registerServiceWorker();
+});
