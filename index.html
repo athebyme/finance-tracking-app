@@ -74,10 +74,23 @@
             </button>
         </header>
 
+        <!-- Accounts Section -->
+        <div class="accounts-section">
+            <div class="section-header">
+                <h2>Мои счета</h2>
+                <button class="btn-add-account" onclick="openAccountModal()">
+                    <span>+ Добавить счет</span>
+                </button>
+            </div>
+            <div class="accounts-container" id="accountsContainer"></div>
+        </div>
+
         <!-- Balance Card -->
         <div class="balance-card">
             <div class="balance-header">
-                <span class="balance-label">Общий баланс</span>
+                <span class="balance-label">
+                    <span id="currentAccountName">Общий баланс</span>
+                </span>
                 <div class="period-selector">
                     <button class="period-btn active" data-period="month">Месяц</button>
                     <button class="period-btn" data-period="year">Год</button>
@@ -174,6 +187,75 @@
                     <span>Добавьте первую транзакцию выше</span>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Account Modal -->
+    <div id="accountModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="accountModalTitle">Добавить счет</h2>
+                <button class="modal-close" onclick="closeAccountModal()">×</button>
+            </div>
+            <form id="accountForm" onsubmit="saveAccount(event)">
+                <div class="form-group">
+                    <label for="accountName">Название счета *</label>
+                    <input type="text" id="accountName" placeholder="Например: Основная карта" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="accountType">Тип счета *</label>
+                    <select id="accountType" required>
+                        <option value="cash">💵 Наличные</option>
+                        <option value="card">💳 Банковская карта</option>
+                        <option value="bank">🏦 Банковский счет</option>
+                        <option value="savings">💰 Накопительный</option>
+                        <option value="investment">📈 Инвестиции</option>
+                        <option value="crypto">₿ Криптовалюта</option>
+                        <option value="wallet">👛 Электронный кошелек</option>
+                        <option value="other">💼 Другое</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="accountColor">Цвет</label>
+                    <div class="color-picker">
+                        <input type="radio" name="accountColor" value="#667eea" id="color1" checked>
+                        <label for="color1" style="background: #667eea"></label>
+
+                        <input type="radio" name="accountColor" value="#764ba2" id="color2">
+                        <label for="color2" style="background: #764ba2"></label>
+
+                        <input type="radio" name="accountColor" value="#f093fb" id="color3">
+                        <label for="color3" style="background: #f093fb"></label>
+
+                        <input type="radio" name="accountColor" value="#4facfe" id="color4">
+                        <label for="color4" style="background: #4facfe"></label>
+
+                        <input type="radio" name="accountColor" value="#43e97b" id="color5">
+                        <label for="color5" style="background: #43e97b"></label>
+
+                        <input type="radio" name="accountColor" value="#fa709a" id="color6">
+                        <label for="color6" style="background: #fa709a"></label>
+
+                        <input type="radio" name="accountColor" value="#fee140" id="color7">
+                        <label for="color7" style="background: #fee140"></label>
+
+                        <input type="radio" name="accountColor" value="#30cfd0" id="color8">
+                        <label for="color8" style="background: #30cfd0"></label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="accountInitialBalance">Начальный баланс (необязательно)</label>
+                    <input type="number" id="accountInitialBalance" placeholder="0.00" step="0.01">
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="closeAccountModal()">Отмена</button>
+                    <button type="submit" class="btn-primary">Сохранить</button>
+                </div>
+            </form>
         </div>
     </div>
 

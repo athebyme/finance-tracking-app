@@ -3,6 +3,8 @@
 // ===============================================
 
 let transactions = [];
+let accounts = [];
+let currentAccountId = null;
 let currentFilter = 'all';
 let currentPeriod = 'month';
 let chart = null;
@@ -32,11 +34,13 @@ const elements = {
 // ===============================================
 
 function init() {
+    loadAccounts();
     loadTransactions();
     loadTheme();
     setDefaultDate();
     setupEventListeners();
     updateUI();
+    renderAccounts();
 }
 
 // ===============================================
@@ -95,6 +99,11 @@ function setupEventListeners() {
 // ===============================================
 
 function addTransaction(type) {
+    if (!currentAccountId) {
+        alert('Сначала создайте счет');
+        return;
+    }
+
     const transaction = {
         id: generateId(),
         type: type,
@@ -102,12 +111,14 @@ function addTransaction(type) {
         description: elements.description.value.trim(),
         category: elements.category.value,
         date: elements.date.value,
+        accountId: currentAccountId,
         timestamp: new Date().getTime()
     };
 
     transactions.unshift(transaction);
     saveTransactions();
     updateUI();
+    renderAccounts(); // Обновляем балансы счетов
     elements.form.reset();
     setDefaultDate();
 
@@ -134,6 +145,170 @@ function generateId() {
 }
 
 // ===============================================
+// Accounts Management
+// ===============================================
+
+function createDefaultAccount() {
+    const defaultAccount = {
+        id: generateId(),
+        name: 'Основной счет',
+        type: 'cash',
+        icon: '💵',
+        color: '#667eea',
+        balance: 0,
+        currency: 'RUB',
+        isDefault: true,
+        createdAt: new Date().getTime()
+    };
+    accounts.push(defaultAccount);
+    currentAccountId = defaultAccount.id;
+    saveAccounts();
+    return defaultAccount;
+}
+
+function addAccount(accountData) {
+    const account = {
+        id: generateId(),
+        name: accountData.name,
+        type: accountData.type,
+        icon: accountData.icon || getAccountIcon(accountData.type),
+        color: accountData.color || '#667eea',
+        balance: parseFloat(accountData.initialBalance) || 0,
+        currency: accountData.currency || 'RUB',
+        isDefault: false,
+        createdAt: new Date().getTime()
+    };
+
+    accounts.push(account);
+    saveAccounts();
+    renderAccounts();
+    return account;
+}
+
+function updateAccount(accountId, updates) {
+    const account = accounts.find(a => a.id === accountId);
+    if (account) {
+        Object.assign(account, updates);
+        saveAccounts();
+        renderAccounts();
+        updateUI();
+    }
+}
+
+function deleteAccount(accountId) {
+    // Не даем удалить если это единственный счет
+    if (accounts.length <= 1) {
+        alert('Нельзя удалить последний счет');
+        return;
+    }
+
+    // Предупреждение
+    const account = accounts.find(a => a.id === accountId);
+    if (!confirm(`Удалить счет "${account.name}"? Все транзакции этого счета будут удалены.`)) {
+        return;
+    }
+
+    // Удаляем счет
+    accounts = accounts.filter(a => a.id !== accountId);
+
+    // Удаляем транзакции счета
+    transactions = transactions.filter(t => t.accountId !== accountId);
+
+    // Переключаемся на другой счет
+    if (currentAccountId === accountId) {
+        currentAccountId = accounts[0].id;
+    }
+
+    saveAccounts();
+    saveTransactions();
+    renderAccounts();
+    updateUI();
+}
+
+function switchAccount(accountId) {
+    currentAccountId = accountId;
+    localStorage.setItem('currentAccountId', accountId);
+    renderAccounts();
+    updateUI();
+}
+
+function getAccountIcon(type) {
+    const icons = {
+        cash: '💵',
+        card: '💳',
+        bank: '🏦',
+        savings: '🏦',
+        investment: '📈',
+        crypto: '₿',
+        wallet: '👛',
+        other: '💼'
+    };
+    return icons[type] || '💼';
+}
+
+function calculateAccountBalance(accountId) {
+    const accountTransactions = transactions.filter(t => t.accountId === accountId);
+    const income = accountTransactions
+        .filter(t => t.type === 'income')
+        .reduce((sum, t) => sum + t.amount, 0);
+    const expense = accountTransactions
+        .filter(t => t.type === 'expense')
+        .reduce((sum, t) => sum + t.amount, 0);
+    return income - expense;
+}
+
+function renderAccounts() {
+    const accountsContainer = document.getElementById('accountsContainer');
+    if (!accountsContainer) return;
+
+    if (accounts.length === 0) {
+        accountsContainer.innerHTML = `
+            <div class="empty-accounts">
+                <p>Нет счетов</p>
+            </div>
+        `;
+        return;
+    }
+
+    const html = accounts.map(account => {
+        const balance = calculateAccountBalance(account.id);
+        const isActive = account.id === currentAccountId;
+
+        return `
+            <div class="account-card ${isActive ? 'active' : ''}"
+                 onclick="switchAccount('${account.id}')"
+                 style="border-left: 4px solid ${account.color}">
+                <div class="account-header">
+                    <span class="account-icon">${account.icon}</span>
+                    <span class="account-name">${account.name}</span>
+                    ${!account.isDefault ? `
+                        <button class="account-menu-btn" onclick="event.stopPropagation(); showAccountMenu('${account.id}')">⋮</button>
+                    ` : ''}
+                </div>
+                <div class="account-balance">${formatCurrency(balance)}</div>
+                <div class="account-type">${getAccountTypeName(account.type)}</div>
+            </div>
+        `;
+    }).join('');
+
+    accountsContainer.innerHTML = html;
+}
+
+function getAccountTypeName(type) {
+    const names = {
+        cash: 'Наличные',
+        card: 'Карта',
+        bank: 'Банковский счет',
+        savings: 'Накопительный',
+        investment: 'Инвестиции',
+        crypto: 'Криптовалюта',
+        wallet: 'Кошелек',
+        other: 'Другое'
+    };
+    return names[type] || 'Другое';
+}
+
+// ===============================================
 // UI Updates
 // ===============================================
 
@@ -144,7 +319,12 @@ function updateUI() {
 }
 
 function updateStats() {
-    const filtered = filterByPeriod(transactions);
+    // Фильтруем транзакции по текущему счету
+    const accountTransactions = currentAccountId
+        ? transactions.filter(t => t.accountId === currentAccountId)
+        : transactions;
+
+    const filtered = filterByPeriod(accountTransactions);
 
     const income = filtered
         .filter(t => t.type === 'income')
@@ -159,10 +339,32 @@ function updateStats() {
     elements.totalBalance.textContent = formatCurrency(balance);
     elements.totalIncome.textContent = formatCurrency(income);
     elements.totalExpense.textContent = formatCurrency(expense);
+
+    // Обновляем название текущего счета в header
+    updateAccountHeader();
+}
+
+function updateAccountHeader() {
+    const accountHeader = document.getElementById('currentAccountName');
+    if (!accountHeader) return;
+
+    if (currentAccountId) {
+        const account = accounts.find(a => a.id === currentAccountId);
+        if (account) {
+            accountHeader.textContent = `${account.icon} ${account.name}`;
+        }
+    } else {
+        accountHeader.textContent = 'Все счета';
+    }
 }
 
 function renderTransactions() {
-    const filtered = transactions.filter(t => {
+    // Фильтруем транзакции по текущему счету
+    const accountTransactions = currentAccountId
+        ? transactions.filter(t => t.accountId === currentAccountId)
+        : transactions;
+
+    const filtered = accountTransactions.filter(t => {
         if (currentFilter === 'all') return true;
         return t.type === currentFilter;
     });
@@ -217,9 +419,14 @@ function renderTransactions() {
 function updateChart() {
     const ctx = elements.expenseChart.getContext('2d');
 
+    // Фильтруем транзакции по текущему счету
+    const accountTransactions = currentAccountId
+        ? transactions.filter(t => t.accountId === currentAccountId)
+        : transactions;
+
     // Get expense data by category
     const expensesByCategory = {};
-    const filtered = filterByPeriod(transactions.filter(t => t.type === 'expense'));
+    const filtered = filterByPeriod(accountTransactions.filter(t => t.type === 'expense'));
 
     filtered.forEach(t => {
         if (!expensesByCategory[t.category]) {
@@ -444,6 +651,140 @@ function loadTransactions() {
         transactions = JSON.parse(saved);
     }
 }
+
+function saveAccounts() {
+    localStorage.setItem('accounts', JSON.stringify(accounts));
+}
+
+function loadAccounts() {
+    const saved = localStorage.getItem('accounts');
+    if (saved) {
+        accounts = JSON.parse(saved);
+    }
+
+    // Если нет счетов - создаем дефолтный
+    if (accounts.length === 0) {
+        createDefaultAccount();
+    }
+
+    // Восстанавливаем текущий счет
+    const savedCurrentId = localStorage.getItem('currentAccountId');
+    if (savedCurrentId && accounts.find(a => a.id === savedCurrentId)) {
+        currentAccountId = savedCurrentId;
+    } else {
+        currentAccountId = accounts[0].id;
+    }
+}
+
+// ===============================================
+// Account Modal
+// ===============================================
+
+let editingAccountId = null;
+
+window.openAccountModal = function(accountId = null) {
+    const modal = document.getElementById('accountModal');
+    const title = document.getElementById('accountModalTitle');
+    const form = document.getElementById('accountForm');
+
+    editingAccountId = accountId;
+
+    if (accountId) {
+        // Редактирование
+        const account = accounts.find(a => a.id === accountId);
+        if (account) {
+            title.textContent = 'Редактировать счет';
+            document.getElementById('accountName').value = account.name;
+            document.getElementById('accountType').value = account.type;
+            document.getElementById('accountInitialBalance').value = '';
+
+            // Выбрать цвет
+            const colorInput = document.querySelector(`input[name="accountColor"][value="${account.color}"]`);
+            if (colorInput) {
+                colorInput.checked = true;
+            }
+        }
+    } else {
+        // Создание
+        title.textContent = 'Добавить счет';
+        form.reset();
+    }
+
+    modal.style.display = 'flex';
+};
+
+window.closeAccountModal = function() {
+    const modal = document.getElementById('accountModal');
+    modal.style.display = 'none';
+    editingAccountId = null;
+};
+
+window.saveAccount = function(event) {
+    event.preventDefault();
+
+    const accountData = {
+        name: document.getElementById('accountName').value,
+        type: document.getElementById('accountType').value,
+        color: document.querySelector('input[name="accountColor"]:checked').value,
+        initialBalance: document.getElementById('accountInitialBalance').value || 0
+    };
+
+    if (editingAccountId) {
+        // Обновление существующего счета
+        updateAccount(editingAccountId, accountData);
+    } else {
+        // Создание нового счета
+        const newAccount = addAccount(accountData);
+
+        // Если указан начальный баланс - создаем транзакцию
+        if (accountData.initialBalance > 0) {
+            transactions.unshift({
+                id: generateId(),
+                type: 'income',
+                amount: parseFloat(accountData.initialBalance),
+                description: 'Начальный баланс',
+                category: 'other',
+                date: new Date().toISOString().split('T')[0],
+                accountId: newAccount.id,
+                timestamp: new Date().getTime()
+            });
+            saveTransactions();
+        }
+    }
+
+    closeAccountModal();
+    updateUI();
+};
+
+window.showAccountMenu = function(accountId) {
+    const account = accounts.find(a => a.id === accountId);
+    if (!account) return;
+
+    const actions = [
+        { label: 'Редактировать', action: () => openAccountModal(accountId) },
+        { label: 'Удалить', action: () => deleteAccount(accountId), danger: true }
+    ];
+
+    // Простое меню через confirm (можно улучшить позже)
+    const choice = confirm(`Счет: ${account.name}\n\n1. Редактировать\n2. Удалить\n\nВыберите действие (OK - Редактировать, Отмена - Удалить)`);
+
+    if (choice) {
+        openAccountModal(accountId);
+    } else {
+        const confirmDelete = confirm('Вы уверены что хотите удалить этот счет? Все транзакции будут удалены.');
+        if (confirmDelete) {
+            deleteAccount(accountId);
+        }
+    }
+};
+
+// Закрытие модального окна по клику вне его
+window.addEventListener('click', (event) => {
+    const modal = document.getElementById('accountModal');
+    if (event.target === modal) {
+        closeAccountModal();
+    }
+});
 
 // ===============================================
 // PWA - Service Worker Registration
